@@ -3,12 +3,12 @@
 
 ## Create/setup the environment
 
-
+Create conda environment
 ```
-conda env create -n "dl-final-proj-env" -f env.yml
+conda env create -n dl-final-proj -f env.yml
 ```
 
-
+Activate conda environment
 ```
 conda activate dl-final-proj-env
 ```
