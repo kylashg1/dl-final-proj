@@ -1,7 +1,8 @@
 import tensorflow as tf
 
 def main():
-    raise NotImplementedError("Adeethyia")
+    import tensorflow as tf
+    print(f"Num GPUs Available: {len(tf.config.list_physical_devices('GPU'))}")
 
 if __name__ ==  "__main__":
     main()
