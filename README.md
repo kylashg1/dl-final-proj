@@ -2,13 +2,9 @@
 “Transforming” Protein sequences into images humans can understand!
 
 ## Create/setup the environment
-
-Create conda environment
 ```
-conda env create -n dl-final-proj -f env.yml
-```
-
-Activate conda environment
-```
-conda activate dl-final-proj-env
+python3 -m venv dl-final-proj && \
+source dl-final-proj/bin/activate && \
+pip install --upgrade pip && \
+pip install numpy pandas matplotlib tensorflow[and-cuda]
 ```
