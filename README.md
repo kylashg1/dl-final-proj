@@ -8,7 +8,7 @@ pip install --upgrade pip && pip install numpy pandas matplotlib tensorflow[and-
 ```
 
 ## Dataset
-We used (Human Protein Atlas?), which can be downloaded from (https://www.proteinatlas.org/about/download).
+We used OpenCell, which can be downloaded from https://opencell.sf.czbiohub.org/download.
 Need to produce csv file with the columns ```nucleus_image_path```, ```protein_image_path```, ```metadata_path```, and ```split``` (train or val).
 
 ## Usage
