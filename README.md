@@ -8,10 +8,10 @@ pip install --upgrade pip && pip install numpy pandas matplotlib tensorflow[and-
 ```
 
 ## Dataset
-We used OpenCell, which can be downloaded from https://opencell.sf.czbiohub.org/download.
+We used OpenCell, which can be downloaded from https://opencell.sf.czbiohub.org/download. Helper script download_tifs_proj.sh included to download images.
 Need to produce csv file with the columns ```nucleus_image_path```, ```protein_image_path```, ```metadata_path```, and ```split``` (train or val).
 
 ## Usage
-``` bash
+```
 python main.py --data <data CSV file path> --epochs <number of epochs>
 ```
