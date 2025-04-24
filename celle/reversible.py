@@ -1,4 +1,3 @@
-# Adeethyia TODO: reversible blocks/sequences(?)
 import tensorflow as tf
 
 def route_args(router, args, depth):
