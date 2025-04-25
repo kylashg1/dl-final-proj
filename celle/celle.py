@@ -68,4 +68,103 @@ def top_k(logits, thres=0.5):
     return tf.where(logits >= kth_value, logits,
                     tf.fill(tf.shape(logits), -float("inf")))
 
-#...typical
+def typical(scores, mass=0.9, filter_value=-float("inf"), min_tokens_to_keep=1):
+    normalized = tf.nn.log_softmax(scores, axis=-1)
+    p = tf.exp(normalized)
+    ent = -tf.reduce_sum(normalized * p, axis=-1, keepdims=True)
+    shifted_scores = tf.abs(-normalized - ent)
+    # Sort scores in ascending order.
+    sorted_scores = tf.sort(shifted_scores, direction='ASCENDING', axis=-1)
+    sorted_indices = tf.argsort(shifted_scores, direction='ASCENDING', axis=-1)
+    sorted_logits = tf.gather(scores, sorted_indices, batch_dims=1)
+    sorted_probs = tf.nn.softmax(sorted_logits, axis=-1)
+    cumulative_probs = tf.cumsum(sorted_probs, axis=-1)
+    bool_mask = tf.cast(cumulative_probs < mass, tf.int32)
+    last_ind = tf.reduce_sum(bool_mask, axis=-1)
+    # Gather kth sorted score for each batch.
+    kth_sorted_score = tf.gather(sorted_scores, last_ind, batch_dims=1)
+    kth_sorted_score = tf.expand_dims(kth_sorted_score, axis=-1)
+    sorted_indices_to_remove = sorted_scores > kth_sorted_score
+    if min_tokens_to_keep > 1:
+        prefix = tf.zeros([tf.shape(sorted_indices_to_remove)[0],
+                           min_tokens_to_keep], dtype=tf.bool)
+        sorted_indices_to_remove = tf.concat(
+            [prefix, sorted_indices_to_remove[:, min_tokens_to_keep:]], axis=-1)
+    # Unsort: compute inverse permutation.
+    inv_perm = tf.argsort(sorted_indices, axis=-1, stable=True)
+    indices_to_remove = tf.gather(sorted_indices_to_remove, inv_perm, batch_dims=1)
+    return tf.where(indices_to_remove,
+                    tf.fill(tf.shape(scores), filter_value),
+                    scores)
+
+# Straight-through Gumbel softmax
+def tf_gumbel_softmax(logits, tau, hard, axis):
+    noise = -tf.math.log(-tf.math.log(tf.random.uniform(tf.shape(logits), 0, 1)))
+    y = tf.nn.softmax((logits + noise) / tau, axis=axis)
+    if hard:
+        y_hard = tf.one_hot(tf.argmax(y, axis=axis), depth=tf.shape(y)[axis])
+        y = tf.stop_gradient(y_hard - y) + y
+    return y
+
+# SharedEmbedding: uses a Dense layer’s kernel as the embedding table.
+class SharedEmbedding(tf.keras.layers.Layer):
+    def __init__(self, linear, start_index, end_index, **kwargs):
+        super().__init__(**kwargs)
+        self.linear = linear
+        self.start_index = start_index
+        self.end_index = end_index
+        self.emb_dim = self.linear.kernel.shape[1]
+
+    def call(self, inputs):
+        emb_weight = self.linear.kernel[self.start_index:self.end_index]
+        return tf.nn.embedding_lookup(emb_weight, inputs)
+
+# ModelExtender: wraps a pretrained model.
+class ModelExtender(tf.keras.layers.Layer):
+    def __init__(self, vocab, out_features, fixed_embedding=False, **kwargs):
+        super().__init__(**kwargs)
+        self.vocab = vocab
+        if vocab == "unirep":
+            # TODO: fill these 3 out
+            self.model = ...
+            in_features = 1900
+        elif vocab == "bert":
+            self.model = ...
+            in_features = 768
+        elif vocab == "esm1b":
+            self.model = ...
+            in_features = 33
+        self.out_features = out_features
+        self.scale_layer = tf.keras.layers.Dense(out_features)
+        self.fixed_embedding = fixed_embedding
+        if self.fixed_embedding:
+            self.model.trainable = False
+
+    def call(self, x, training=False):
+        if self.fixed_embedding:
+            x = tf.stop_gradient(self.model(x))
+        else:
+            x = self.model(x)
+        if ((self.vocab == "unirep" and self.out_features != 1900) or
+            (self.vocab == "bert" and self.out_features != 768) or
+            (self.vocab == "esm1b" and self.out_features != 1280)):
+            x = self.scale_layer(x)
+        return x
+
+# Discrete VAE components
+class ResBlock(tf.keras.layers.Layer):
+    def __init__(self, chan, **kwargs):
+        super().__init__(**kwargs)
+        self.net = tf.keras.Sequential([
+            tf.keras.layers.Conv2D(chan, kernel_size=3, padding='same'),
+            tf.keras.layers.ReLU(),
+            tf.keras.layers.Conv2D(chan, kernel_size=3, padding='same'),
+            tf.keras.layers.ReLU(),
+            tf.keras.layers.Conv2D(chan, kernel_size=1, padding='same'),
+        ])
+
+    def call(self, x):
+        return self.net(x) + x
+
+
+
