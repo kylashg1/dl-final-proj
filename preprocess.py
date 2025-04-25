@@ -107,10 +107,10 @@ class OpenCellLoaderTF:
             }
 
     def get_dataset(self):
-        if self.sequence_mode == "aadescriptors":
-            sequence_spec = tf.TensorSpec(shape=(None, len(next(iter(self.descriptor_lookup.values())))), dtype=tf.float32)
-        else:
-            sequence_spec = tf.TensorSpec(shape=(None,), dtype=tf.int64)
+        # if self.sequence_mode == "aadescriptors":
+        #     sequence_spec = tf.TensorSpec(shape=(None, len(next(iter(self.descriptor_lookup.values())))), dtype=tf.float32)
+        # else:
+        #     sequence_spec = tf.TensorSpec(shape=(None,), dtype=tf.int64)
 
         output_signature = {
             "nucleus": tf.TensorSpec(shape=(self.crop_size, self.crop_size, 1), dtype=tf.float32),
