@@ -2,8 +2,8 @@ from math import log2, sqrt
 import numpy as np
 
 import tensorflow as tf
-from tensorflow import keras
-import tensorflow.keras.backend as K
+import keras
+from keras import backend as K
 from einops import rearrange
 
 from celle.vae import VQGanVAE
