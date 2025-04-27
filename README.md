@@ -15,3 +15,6 @@ Need to produce csv file with the columns ```nucleus_image_path```, ```protein_i
 ```
 python main.py --data <data CSV file path> --epochs <number of epochs>
 ```
+
+## Public implementations
+https://github.com/BoHuangLab/Protein-Localization-Transformer/
