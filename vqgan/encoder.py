@@ -11,4 +11,5 @@ def encoder(latent_dim=128):
         tf.keras.layers.Conv2D(128, 4, strides=2, padding='same', activation='relu'),
         tf.keras.layers.Conv2D(latent_dim, 3, strides=1, padding='same', activation='relu') 
     ], name="Encoder")
+    
     return encoder
