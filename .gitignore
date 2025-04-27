@@ -1,2 +1,4 @@
 data/
 dl-final-proj/
+__pycache__/
+.DS_Store

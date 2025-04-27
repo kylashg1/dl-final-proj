@@ -2,6 +2,7 @@ numpy
 pandas
 matplotlib
 tensorflow[and-cuda]
+torch
 keras
 rotary-embedding-tensorflow
 einops
