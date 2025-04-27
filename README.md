@@ -3,7 +3,9 @@
 
 ## Requirements
 ``` bash
-python3 -m venv dl-final-proj && source dl-final-proj/bin/activate && pip install --upgrade pip && \
+python3 -m venv dl-final-proj && \
+source dl-final-proj/bin/activate && \
+pip install --upgrade pip && \
 pip install -r requirements.txt
 ```
 
