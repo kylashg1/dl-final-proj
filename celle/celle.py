@@ -3,7 +3,6 @@ import numpy as np
 
 import tensorflow as tf
 import keras
-from keras import backend as K
 from einops import rearrange
 
 from celle.vae import VQGanVAE
