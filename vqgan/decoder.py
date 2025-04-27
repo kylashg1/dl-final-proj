@@ -3,6 +3,7 @@ import tensorflow as tf
 # Decided to implement as a function instead of a class because we're using
 # the encoder as an intermediary component, not as a full model
 
+# CNN Decoder for proteign image recontruction
 def decoder(latent_dim=128):
     decoder =  tf.keras.Sequential([
         tf.keras.layers.Input(shape=(16, 16, latent_dim)),  # Depends on encoder compression
