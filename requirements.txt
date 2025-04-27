@@ -1,0 +1,9 @@
+numpy
+pandas
+matplotlib
+tensorflow[and-cuda]
+keras
+rotary-embedding-tensorflow
+einops
+boto3
+transformers
