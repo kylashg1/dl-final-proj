@@ -1,9 +1,13 @@
 # Import everything needed
 import dataloader as data
+
 from vqgan.vqgan import VQGAN
 from vqgan.encoder import encoder
 from vqgan.decoder import decoder
 from vqgan.vector_quantizer import VectorQuantizer
+
+from celle.celle import Transformer
+
 import tensorflow as tf
 
 def main():
@@ -51,10 +55,11 @@ def main():
     print(f"output {threshold_data}")
 
     # Concatenate
-    tf.concat([sequence, nucleus_data, threshold_data])
+    concat_input = tf.concat([sequence, nucleus_data, threshold_data])
 
     # Feed into transformer
-
+    transformer = Transformer()
+    transformer_output = transformer(concat_input)
 
 
 
