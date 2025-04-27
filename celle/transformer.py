@@ -6,8 +6,7 @@ from functools import partial
 from itertools import cycle, islice
 
 from celle.reversible import ReversibleSequence, SequentialSequence
-from celle.attention import Attention, SparseConvCausalAttention,
-SparseAxialCausalAttention
+from celle.attention import Attention, SparseConvCausalAttention, SparseAxialCausalAttention
 from rotary_embedding_tensorflow import RotaryEmbedding, broadcat
 
 # Helpers
