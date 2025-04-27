@@ -1,6 +1,5 @@
 import tensorflow as tf
 
-
 # Decided to implement as a function instead of a class because we're using
 # the encoder as an intermediary component, not as a full model
 
