@@ -14,7 +14,18 @@ def train_vqgan(train_dataset, target_dataset):
         optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-4),
         loss=tf.keras.losses.MeanSquaredError(), # Reconstruction loss
     )
-    vqgan.fit(train_dataset, target_dataset, epochs=1) # Training the model
+    history = vqgan.fit(train_dataset, target_dataset, epochs=100) # Training the model
+
+    # Plot VQGAN training loss
+    plt.figure()
+    plt.plot(history.history['loss'], label='Training Loss')
+    plt.title('VQGAN Training Loss')
+    plt.xlabel('Epoch')
+    plt.ylabel('Loss')
+    plt.legend()
+    plt.savefig('vqgan_training_loss.png')
+    plt.close()
+
     vqgan.save('vqgan_model') # Saving the trained model
 
 def main():
