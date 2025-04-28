@@ -28,31 +28,29 @@ def main():
     # processed_data.populate_csv("data.csv") # puts processed .png images into the csv and searched up the corresponding amino acid sequence and also puts into data.csv
 
     # creates the vectorized dataset to pass into VQGAN
-    dataset_tensor = data.OpenCellLoaderTF("data.csv", crop_size=256)
-    # dataset_tensor = "data.csv"
-    dataset_tensor = dataset_tensor.get_dataset()
-    dataset_tensor = dataset_tensor.batch(5)
+    dataset = data.OpenCellLoaderTF("data.csv", crop_size=256).get_dataset()
 
-    input = None
-    threshold = None
-    sequence = None
-    #syntax for accessing each vectorized dataset - need to rework
-    for batch in dataset_tensor:
-        input = batch['nucleus']  # (batch_size, 256, 256, 1) # VQGAN
-        target = batch['target']    # (batch_size, 256, 256, 1) # this one is NOT passed into VQGAN
-        threshold = batch['threshold']  # (batch_size, 256, 256, 1) #VQGAN
-        sequence = batch['sequence']  # (batch_size, 1, 1001, 256) # already tokenized, just needs to be concatted
+    # Get data in four separate tensors
+    nucleus_list = []
+    target_list = []
+    threshold_list = []
+    sequence_list = []
 
-    # checking shape of each tensor
-    # print(nucleus.shape)  # (batch_size, 256, 256, 1)
-    print(target.shape)  # (batch_size, 256, 256, 1)
-    print(threshold.shape)  # (batch_size, 256, 256, 1)
-    print(sequence.shape)  # (batch_size, 1, 1001, 256)
+    for batch in dataset:
+        nucleus_list.append(batch["nucleus"])
+        target_list.append(batch["target"])
+        threshold_list.append(batch["threshold"])
+        sequence_list.append(batch["sequence"])
+
+    nucleus_tensor = tf.stack(nucleus_list)
+    target_tensor = tf.stack(target_list) # Probably not useful
+    threshold_tensor = tf.stack(threshold_list)
+    sequence_tensor = tf.stack(sequence_list)
 
     # VQGAN
     # Loading in trained vqgan
-
-    train_vqgan(input, input)
+    images_tensor = tf.concat([nucleus_tensor, threshold_tensor])
+    train_vqgan(images_tensor, images_tensor)
     vqgan = tf.keras.models.load_model('vqgan_model', custom_objects={'VectorQuantizer': VectorQuantizer})
 
     # For the nucleus
