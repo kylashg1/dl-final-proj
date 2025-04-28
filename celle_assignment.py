@@ -11,10 +11,10 @@ def train_vqgan(train_dataset, target_dataset):
     vqgan = VQGAN(latent_dim=128)
     # Compiling the model with optimizer and loss
     vqgan.compile(
-        optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-4),
+        optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-3),
         loss=tf.keras.losses.MeanSquaredError(), # Reconstruction loss
     )
-    history = vqgan.fit(train_dataset, target_dataset, epochs=100) # Training the model
+    history = vqgan.fit(train_dataset, target_dataset, epochs=100, verbose=2) # Training the model
 
     # Plot VQGAN training loss
     plt.figure()
