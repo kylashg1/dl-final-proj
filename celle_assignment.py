@@ -1,13 +1,6 @@
 # Import everything needed
 import dataloader as data
-
-from vqgan.vqgan import VQGAN
-from vqgan.encoder import encoder
-from vqgan.decoder import decoder
-from vqgan.vector_quantizer import VectorQuantizer
-
-from celle.celle import Transformer
-
+from vqgan import VQGAN, VectorQuantizer
 import tensorflow as tf
 from transformer_new_new_new import TransformerModel
 from embed_to_density import EmbeddingToDensity
@@ -47,18 +40,20 @@ def main():
     print(sequence.shape)  # (batch_size, 1, 1001, 256)
 
 
-
     # VQGAN
+    # Loading in trained vqgan
+    vqgan = tf.keras.models.load_model('vqgan_model', custom_objects={'VectorQuantizer': VectorQuantizer})
+
     # For the nucleus
-    nucleus_vqgan = VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
-    nucleus_data = nucleus_vqgan(input)
+    # nucleus_vqgan = VQGAN() # VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
+    nucleus_data = vqgan(input)
     print(f"output {nucleus_data}")
 
     print(nucleus_data.shape)  
 
     # For the threshold image
-    threshold_vqgan = VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
-    threshold_data = threshold_vqgan(threshold)
+    # threshold_vqgan = VQGAN() # VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
+    threshold_data = vqgan(threshold)
     print(f"output {threshold_data}")
 
     print(threshold_data.shape)  
@@ -108,6 +103,11 @@ def main():
     transformer_model = TransformerModel(embed_dim=256, num_heads=8, ff_dim=512, num_layers=4)
     # Create model
 
+    # Compiling the model with optimizer and loss
+    vqgan.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+        loss=tf.keras.losses.MeanSquaredError(),  # Reconstruction loss (MSE between input and output images)
+    )
 
     # Example input
 
