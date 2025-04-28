@@ -8,3 +8,4 @@ rotary-embedding-tensorflow
 einops
 boto3
 transformers
+Bio
