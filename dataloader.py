@@ -10,6 +10,9 @@ import random
 import downloader as cell_downloader
 from transformers import BertTokenizer, TFBertModel
 import torch
+import biomart
+from Bio.Seq import Seq
+
 
 class dataloader():
     def __init__(self):
@@ -22,7 +25,7 @@ class dataloader():
         """
         Script to download cell images from the OpenCell dataset
         """
-        cell_downloader.download_from_OpenCell(limit=3)
+        cell_downloader.download_from_OpenCell(limit)
 
 
     def cell_img_splitter(self, img_path: str, output_folder:str):
@@ -84,10 +87,10 @@ class dataloader():
             amino_acid_sequence = self.get_amino_acid_sequence(ensg_id)
             self.data[ensg_id].append(amino_acid_sequence)
         
-        # print(self.data)
-        df = pd.DataFrame(self.data)
-        df = df.transpose()
-        df.columns = ['nucleus_img_path', 'protein_img_path', 'amino_acid_seq']
+        print(self.data)
+        df = pd.DataFrame(self.data.values(), columns=['nucleus_img_path', 'protein_img_path', 'amino_acid_seq'])
+        # df = df.transpose()
+        # df.columns = ['nucleus_img_path', 'protein_img_path', 'amino_acid_seq']
 
         df.to_csv(csv_path, index=False)
         print(f"{csv_path} populated!")
@@ -104,11 +107,15 @@ class dataloader():
 
         if response.status_code == 200:
             data = response.json()
-            amino_acid_sequence = data.get('seq', None)
+            dna_seq = data.get('seq', None)
 
-            if amino_acid_sequence:
+            # uses biopython to convert DNA sequences to AA sequences for each ENSG_id
+            if dna_seq:
                 # print(f"aa seq {amino_acid_sequence}")
-                return amino_acid_sequence
+                dna_seq = Seq(dna_seq)
+                rna_seq = dna_seq.transcribe()
+                amino_seq = rna_seq.translate()
+                return amino_seq
 
 
 class OpenCellLoaderTF():
