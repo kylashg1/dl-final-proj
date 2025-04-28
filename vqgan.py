@@ -38,13 +38,15 @@ class VectorQuantizer(tf.keras.layers.Layer):
         return quantized, total_loss
 
 class VQGAN(tf.keras.Model):
-    def __init__(self, latent_dim=128, input_shape = 64, **kwargs):
+    def __init__(self, latent_dim=128, input_shape=256, **kwargs):
         super().__init__(**kwargs)
         self.encoder = tf.keras.Sequential([
-            tf.keras.layers.Input(shape=(input_shape, input_shape, 1)), # Assuming 64x64 thresholded input and is grayscale
+            tf.keras.layers.Input(shape=(input_shape, input_shape, 1)), # Assuming thresholded input and is grayscale
             tf.keras.layers.Conv2D(64, 4, strides=2, padding='same', activation='relu'),
             tf.keras.layers.Conv2D(128, 4, strides=2, padding='same', activation='relu'),
-            tf.keras.layers.Conv2D(latent_dim, 3, strides=1, padding='same', activation='relu') 
+            tf.keras.layers.Conv2D(256, 4, strides=2, padding='same', activation='relu'),
+            tf.keras.layers.Conv2D(512, 4, strides=2, padding='same', activation='relu'),
+            tf.keras.layers.Conv2D(latent_dim, kernel_size=4, strides=1, padding='same')
         ], name="Encoder")
         self.decoder = tf.keras.Sequential([
             tf.keras.layers.Input(shape=(16, 16, latent_dim)),  # Depends on encoder compression
