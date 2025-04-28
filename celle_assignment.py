@@ -10,6 +10,9 @@ import numpy as np
 import ot
 from scipy.spatial.distance import cdist
 
+plt.rcParams['savefig.dpi'] = 300
+plt.rcParams['savefig.bbox'] = 'tight'
+
 # Creating + training the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
 def train_vqgan(train_dataset, target_dataset):
     vqgan = VQGAN(latent_dim=128)
@@ -31,6 +34,20 @@ def train_vqgan(train_dataset, target_dataset):
     plt.close()
 
     vqgan.save('vqgan_model') # Saving the trained model
+
+def tensor_to_image(tensor):
+    tensor = tf.convert_to_tensor(tensor)
+
+    # Normalize if needed (optional, depending on how your tensor looks)
+    if tf.reduce_max(tensor) > 1.0:
+        tensor = tensor / tf.reduce_max(tensor)
+
+    # If grayscale, expand dims to 3 channels
+    if len(tensor.shape) == 2:
+        tensor = tf.expand_dims(tensor, axis=-1)
+
+    tensor = tf.clip_by_value(tensor, 0.0, 1.0) # make sure values are between 0-1
+    return tensor
 
 
 
@@ -87,12 +104,12 @@ def compute_emd(nucleus_data_list, density_maps):
 def main():
     # Preprocess
 
-    # downloads images from OpenCell and put them into a csv and processed data folders
-    processed_data = data.dataloader()
-    limit = 100
-    # processed_data.download_cell_imgages(limit=limit) # download function for OpenCell AWS server - only argument is how many TOTAL images you want to download, None means download ALL images
-    processed_data.populate_inputs("unprocessed_data", "processed_data") # splits .tiff images into .png images
-    processed_data.populate_csv("data.csv") # puts processed .png images into the csv and searched up the corresponding amino acid sequence and also puts into data.csv
+    # # downloads images from OpenCell and put them into a csv and processed data folders
+    # processed_data = data.dataloader()
+    # limit = 100
+    # # processed_data.download_cell_imgages(limit=limit) # download function for OpenCell AWS server - only argument is how many TOTAL images you want to download, None means download ALL images
+    # processed_data.populate_inputs("unprocessed_data", "processed_data") # splits .tiff images into .png images
+    # processed_data.populate_csv("data.csv") # puts processed .png images into the csv and searched up the corresponding amino acid sequence and also puts into data.csv
 
     # creates the vectorized dataset to pass into VQGAN
     dataset = data.OpenCellLoaderTF("data.csv", crop_size=256).get_dataset()
@@ -166,7 +183,7 @@ def main():
     nucleus_image = nucleus_list[2]       # (256, 256, 1)
     density_map = density_maps[2]  # (256, 256, 1)
 
-    overlay_density_on_image(nucleus_image, density_map, alpha=0.5)
+    # overlay_density_on_image(nucleus_image, density_map, alpha=0.5)
 
     # emd_value = compute_emd(density_map, threshold_image)
     # print(f"emd value: {emd_value}")
@@ -181,11 +198,25 @@ def main():
     plt.ylabel('EMD')
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig('emd.png', dpi=300, bbox_inches='tight')
+    plt.savefig('emd.png')
     plt.close()
 
+    def save_img(img, fname):
+        image = tensor_to_image(img)
+        plt.imshow(tf.squeeze(image), cmap='gray') # squeeze removes extra channel if needed
+        plt.axis('off')
+        plt.savefig(f'images/{fname}.png')
 
 
+
+    for i, imgs in enumerate(zip(threshold_list, nucleus_list, target_list, density_maps)):
+        t_img, n_img, tar_img, d_map = imgs
+        overlay_density_on_image(image=t_img, density_map=d_map, fname=f'threshold_density{i}', alpha=0.5)
+        save_img(t_img, f'threshhold{i}')
+        overlay_density_on_image(image=n_img, density_map=d_map, fname=f'nucleus_density{i}', alpha=0.5)
+        save_img(n_img, f'nucleus{i}')
+        overlay_density_on_image(image=tar_img, density_map=d_map, fname=f'target_density{i}', alpha=0.5)
+        save_img(tar_img, f'target{i}')
 
 if __name__ ==  "__main__":
     main()

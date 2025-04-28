@@ -1,7 +1,7 @@
 import tensorflow as tf
 import matplotlib.pyplot as plt
 
-def overlay_density_on_image(image, density_map, alpha=0.4, cmap='jet'):
+def overlay_density_on_image(image, density_map, fname, alpha=0.4, cmap='jet'):
     """
     Overlay a density map onto an image.
 
@@ -25,4 +25,4 @@ def overlay_density_on_image(image, density_map, alpha=0.4, cmap='jet'):
     plt.imshow(image, cmap='gray')
     plt.imshow(density_map, cmap=cmap, alpha=alpha)
     plt.axis('off')
-    plt.show()
+    plt.savefig(f'images/{fname}.png', dpi=300, bbox_inches='tight')
