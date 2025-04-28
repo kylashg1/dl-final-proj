@@ -109,42 +109,13 @@ class dataloader():
             data = response.json()
             dna_seq = data.get('seq', None)
 
+            # uses biopython to convert DNA sequences to AA sequences for each ENSG_id
             if dna_seq:
                 # print(f"aa seq {amino_acid_sequence}")
                 dna_seq = Seq(dna_seq)
                 rna_seq = dna_seq.transcribe()
                 amino_seq = rna_seq.translate()
                 return amino_seq
-
-
-# def get_amino_acid_sequence(ensg_id):
-#     """
-#     Retrieves the amino acid sequence for a given ENSG ID using Ensembl BioMart.
-#     """
-#     # Connect to the Ensembl BioMart database
-#     server = biomart.BiomartServer("http://www.ensembl.org/biomart")
-#     dataset = server.datasets['hsapiens_gene_ensembl']
-    
-#     # Query to get the amino acid sequence using a different method
-#     query = dataset.build_query(
-#         attributes=["ensembl_gene_id", "peptide"],
-#         filters={"ensembl_gene_id": ensg_id}
-#     )
-    
-#     # Execute the query and retrieve the result
-#     response = query.execute()
-    
-#     # Extract and return the sequence
-#     if len(response) > 0:
-#         amino_acid_sequence = response[0]['peptide']
-#         return amino_acid_sequence
-#     else:
-#         print(f"No amino acid sequence found for ENSG ID: {ensg_id}")
-#         return None
-
-# # Example usage:
-# ensg_id = "ENSG00000004059"  # Example ENSG ID
-# amino_acid_sequence = get_amino_acid_sequence(ensg_id)  # Use the instance
 
 
 class OpenCellLoaderTF():
