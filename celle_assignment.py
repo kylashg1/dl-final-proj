@@ -5,6 +5,7 @@ import tensorflow as tf
 from transformer_new_new_new import TransformerModel
 from embed_to_density import EmbeddingToDensity
 from heatmap import overlay_density_on_image
+import matplotlib.pyplot as plt
 
 # Creating + training the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
 def train_vqgan(train_dataset, target_dataset):
@@ -23,7 +24,7 @@ def train_vqgan(train_dataset, target_dataset):
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('vqgan_training_loss.png')
+    plt.savefig('vqgan_training_loss.png', dpi=300, bbox_inches='tight')
     plt.close()
 
     vqgan.save('vqgan_model') # Saving the trained model
@@ -41,44 +42,23 @@ def main():
     # creates the vectorized dataset to pass into VQGAN
     dataset = data.OpenCellLoaderTF("data.csv", crop_size=256).get_dataset()
 
-    # Get data in four separate tensors
-    nucleus_list = []
-    target_list = []
-    threshold_list = []
-    sequence_list = []
+    # Map nucleus and threshold images into two-channel images
+    def vqgan_two_channel_inputs(data):
+        return (tf.concat([data['nucleus'], data['threshold']], axis=-1)) * 2
 
-    for batch in dataset:
-        nucleus_list.append(batch["nucleus"])
-        target_list.append(batch["target"])
-        threshold_list.append(batch["threshold"])
-        sequence_list.append(batch["sequence"])
-
-    nucleus_tensor = tf.stack(nucleus_list)
-    target_tensor = tf.stack(target_list) # Probably not useful
-    threshold_tensor = tf.stack(threshold_list)
-    sequence_tensor = tf.stack(sequence_list)
+    vqgan_dataset = dataset.map(vqgan_two_channel_inputs).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
 
     # VQGAN
     # Loading in trained vqgan
-    images_tensor = tf.concat([nucleus_tensor, threshold_tensor])
-    train_vqgan(images_tensor, images_tensor)
+    train_vqgan(vqgan_dataset, vqgan_dataset)
     vqgan = tf.keras.models.load_model('vqgan_model', custom_objects={'VectorQuantizer': VectorQuantizer})
 
-    # For the nucleus
-    # nucleus_vqgan = VQGAN() # VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
+    nucleus_threshold_data = vqgan(vqgan_dataset)
+    print(f"VQGAN output: {nucleus_threshold_data.shape}")
 
-    nucleus_data = vqgan(input)
-    print(f"output {nucleus_data}")
-
-    print(nucleus_data.shape)  
-
-    # For the threshold image
-    # threshold_vqgan = VQGAN() # VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
-    threshold_data = vqgan(threshold)
-    print(f"output {threshold_data}")
-
-
-    print(threshold_data.shape)  
+    nucleus_data, threshold_data = tf.split(combined_output, num_or_size_splits=2, axis=-1)
+    print(f"Nucleus data: {nucleus_data.shape}")
+    print(f"Threshold data: {threshold_data.shape}")
 
     sequence = tf.cast(sequence, tf.float32)
     sequence = tf.squeeze(sequence, axis=1)
