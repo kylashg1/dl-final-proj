@@ -1,13 +1,6 @@
 # Import everything needed
 import dataloader as data
-
-from vqgan.vqgan import VQGAN
-from vqgan.encoder import encoder
-from vqgan.decoder import decoder
-from vqgan.vector_quantizer import VectorQuantizer
-
-from celle.celle import Transformer
-
+from vqgan import VQGAN, VectorQuantizer
 import tensorflow as tf
 
 def main():
@@ -42,47 +35,36 @@ def main():
     print(sequence.shape)  # (batch_size, 1, 1001, 256)
 
 
-
     # VQGAN
+    # Loading in trained vqgan
+    vqgan = tf.keras.models.load_model('vqgan_model', custom_objects={'VectorQuantizer': VectorQuantizer})
+
     # For the nucleus
-    nucleus_vqgan = VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
-    nucleus_data = nucleus_vqgan(input)
+    # nucleus_vqgan = VQGAN() # VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
+    nucleus_data = vqgan(input)
     print(f"output {nucleus_data}")
 
     # For the threshold image
-    threshold_vqgan = VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
-    threshold_data = threshold_vqgan(threshold)
+    # threshold_vqgan = VQGAN() # VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
+    threshold_data = vqgan(threshold)
     print(f"output {threshold_data}")
 
-    # Concatenate
-    concat_input = tf.concat([sequence, nucleus_data, threshold_data])
 
-    # Feed into transformer
-    transformer = Transformer()
-    transformer_output = transformer(concat_input)
+# Creating + traning the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
+def train_vqgan(train_dataset):
+    vqgan = VQGAN(latent_dim=128)
 
+    # Compiling the model with optimizer and loss
+    vqgan.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+        loss=tf.keras.losses.MeanSquaredError(),  # Reconstruction loss (MSE between input and output images)
+    )
 
+    # Training the model
+    vqgan.fit(train_dataset, epochs=100)
 
-
-
-
-
-
-
-
-
-# Embedding/Concatenating everything together: concat order -> AA + nucleus + threshold
-
-
-
-
-
-
-
-
-# Transformer
-
-
+    # Saving the trained model
+    vqgan.save('vqgan_model')
 
 
 if __name__ ==  "__main__":
