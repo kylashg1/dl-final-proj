@@ -6,6 +6,9 @@ from transformer import TransformerModel
 from embed_to_density import EmbeddingToDensity
 from heatmap import overlay_density_on_image
 import matplotlib.pyplot as plt
+import numpy as np
+import ot
+from scipy.spatial.distance import cdist
 
 # Creating + training the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
 def train_vqgan(train_dataset, target_dataset):
@@ -28,6 +31,58 @@ def train_vqgan(train_dataset, target_dataset):
     plt.close()
 
     vqgan.save('vqgan_model') # Saving the trained model
+
+
+
+# def compute_emd(prob_map, ground_truth):
+#     # Reshape the images into 1D arrays
+#     prob_map = prob_map.flatten()
+#     ground_truth = ground_truth.flatten()
+
+#     # Normalize the distributions (ensure sum is 1)
+#     prob_map /= prob_map.sum()
+#     ground_truth /= ground_truth.sum()
+
+#     # Create a grid of pixel coordinates
+#     grid_size = prob_map.shape[0]
+#     x, y = np.meshgrid(np.arange(grid_size), np.arange(grid_size))
+#     coords = np.column_stack([x.flatten(), y.flatten()])
+
+#     # Compute the distance matrix (Euclidean distance)
+#     distance_matrix = cdist(coords, coords, metric='euclidean')
+
+#     # Calculate the Earth Mover's Distance using Sinkhorn regularization
+#     emd_value = ot.emd2(prob_map, ground_truth, distance_matrix)
+    
+#     return emd_value
+
+def compute_emd(nucleus_data_list, density_maps):
+    # Stack the list into a proper tensor
+    nucleus_data = tf.stack(nucleus_data_list, axis=0)  # Shape: [batch, 256, 256]
+
+    nucleus_flat = tf.reshape(nucleus_data, [tf.shape(nucleus_data)[0], -1])
+    density_flat = tf.reshape(density_maps, [tf.shape(density_maps)[0], -1])
+
+    nucleus_flat /= tf.reduce_sum(nucleus_flat, axis=1, keepdims=True) + 1e-8
+    density_flat /= tf.reduce_sum(density_flat, axis=1, keepdims=True) + 1e-8
+
+    nucleus_cdf = tf.cumsum(nucleus_flat, axis=1)
+    density_cdf = tf.cumsum(density_flat, axis=1)
+
+    emd_per_sample = tf.reduce_mean(tf.abs(nucleus_cdf - density_cdf), axis=1)
+
+    return emd_per_sample
+
+
+
+# # Example Usage:
+# prob_map = np.random.rand(256, 256)  # Example probability heat map
+# ground_truth = np.random.rand(256, 256)  # Example ground truth image
+
+# emd_result = compute_emd(prob_map, ground_truth)
+# print(f"Earth Mover's Distance: {emd_result}")
+
+
 
 def main():
     # Preprocess
@@ -107,10 +162,28 @@ def main():
     density_maps = density_model(transformer_output)
     print(f"Density map shape: {density_maps.shape}")  # (3, 256, 256, 1)
 
+    threshold_image = threshold_list[2]
     nucleus_image = nucleus_list[2]       # (256, 256, 1)
     density_map = density_maps[2]  # (256, 256, 1)
 
     overlay_density_on_image(nucleus_image, density_map, alpha=0.5)
+
+    # emd_value = compute_emd(density_map, threshold_image)
+    # print(f"emd value: {emd_value}")
+
+
+    emd_scores = compute_emd(nucleus_list, density_maps).numpy()
+
+    plt.figure(figsize=(6, 6))
+    plt.plot(emd_scores, marker='o')
+    plt.title('Earth Mover\'s Distance (Batch)')
+    plt.xlabel('Sample Index')
+    plt.ylabel('EMD')
+    plt.grid(True)
+    plt.tight_layout()
+    plt.savefig('emd.png', dpi=300, bbox_inches='tight')
+    plt.close()
+
 
 
 
