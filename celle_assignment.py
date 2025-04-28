@@ -7,14 +7,14 @@ from embed_to_density import EmbeddingToDensity
 from heatmap import overlay_density_on_image
 
 # Creating + training the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
-def train_vqgan(train_dataset):
+def train_vqgan(train_dataset, target_dataset):
     vqgan = VQGAN(latent_dim=128)
     # Compiling the model with optimizer and loss
     vqgan.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-3),
+        optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-4),
         loss=tf.keras.losses.MeanSquaredError(), # Reconstruction loss
     )
-    vqgan.fit(train_dataset, epochs=1) # Training the model
+    vqgan.fit(train_dataset, target_dataset, epochs=1) # Training the model
     vqgan.save('vqgan_model') # Saving the trained model
 
 def main():
@@ -29,6 +29,7 @@ def main():
 
     # creates the vectorized dataset to pass into VQGAN
     dataset_tensor = data.OpenCellLoaderTF("data.csv", crop_size=256)
+    # dataset_tensor = "data.csv"
     dataset_tensor = dataset_tensor.get_dataset()
     dataset_tensor = dataset_tensor.batch(5)
 
@@ -50,10 +51,13 @@ def main():
 
     # VQGAN
     # Loading in trained vqgan
+
+    train_vqgan(input, input)
     vqgan = tf.keras.models.load_model('vqgan_model', custom_objects={'VectorQuantizer': VectorQuantizer})
 
     # For the nucleus
     # nucleus_vqgan = VQGAN() # VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
+
     nucleus_data = vqgan(input)
     print(f"output {nucleus_data}")
 
@@ -111,12 +115,6 @@ def main():
 #     print(output.shape)  # (batch_size, num_classes) or whatever your output shape is
     transformer_model = TransformerModel(embed_dim=256, num_heads=8, ff_dim=512, num_layers=4)
     # Create model
-
-    # Compiling the model with optimizer and loss
-    vqgan.compile(
-        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
-        loss=tf.keras.losses.MeanSquaredError(),  # Reconstruction loss (MSE between input and output images)
-    )
 
     # Example input
 

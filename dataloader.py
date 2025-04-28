@@ -10,7 +10,7 @@ import random
 import downloader as cell_downloader
 from transformers import BertTokenizer, TFBertModel
 import torch
-import biomart
+# import biomart
 from Bio.Seq import Seq
 
 
@@ -119,7 +119,7 @@ class dataloader():
 
 
 class OpenCellLoaderTF():
-    def __init__(self, data_path, crop_size=64):
+    def __init__(self, data_path, crop_size=256):
         self.df = pd.read_csv(data_path)
         self.crop_size = crop_size
         self.root = os.path.dirname(data_path)
@@ -169,7 +169,7 @@ class OpenCellLoaderTF():
         protein_embeddings = self.bert_model(encoded_seq.input_ids).last_hidden_state # (1, 1001, 1024)
 
         # need to project to 256-dim embedding to match VQGAN embeddings
-        projection_layer = tf.keras.layers.Dense(64)
+        projection_layer = tf.keras.layers.Dense(256)
         protein_embeddings = projection_layer(protein_embeddings) # (1, 1001, 256)
         
         return protein_embeddings
@@ -217,6 +217,6 @@ class OpenCellLoaderTF():
             "nucleus": tf.TensorSpec(shape=(self.crop_size, self.crop_size, 1), dtype=tf.float32, name="nucleus"),
             "target": tf.TensorSpec(shape=(self.crop_size, self.crop_size, 1), dtype=tf.float32, name="target"),
             "threshold": tf.TensorSpec(shape=(self.crop_size, self.crop_size, 1), dtype=tf.float32, name="threshold"),
-            "sequence": tf.TensorSpec(shape=(1, 1001, 64), dtype=tf.int64, name="sequence")
+            "sequence": tf.TensorSpec(shape=(1, 1001, 256), dtype=tf.int64, name="sequence")
         }
         return tf.data.Dataset.from_generator(self._generator, output_signature=output_signature)
