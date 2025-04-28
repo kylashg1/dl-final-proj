@@ -10,6 +10,9 @@ import random
 import downloader as cell_downloader
 from transformers import BertTokenizer, TFBertModel
 import torch
+import biomart
+from Bio.Seq import Seq
+
 
 class dataloader():
     def __init__(self):
@@ -22,7 +25,7 @@ class dataloader():
         """
         Script to download cell images from the OpenCell dataset
         """
-        cell_downloader.download_from_OpenCell(limit=3)
+        cell_downloader.download_from_OpenCell(limit)
 
 
     def cell_img_splitter(self, img_path: str, output_folder:str):
@@ -84,10 +87,10 @@ class dataloader():
             amino_acid_sequence = self.get_amino_acid_sequence(ensg_id)
             self.data[ensg_id].append(amino_acid_sequence)
         
-        # print(self.data)
-        df = pd.DataFrame(self.data)
-        df = df.transpose()
-        df.columns = ['nucleus_img_path', 'protein_img_path', 'amino_acid_seq']
+        print(self.data)
+        df = pd.DataFrame(self.data.values(), columns=['nucleus_img_path', 'protein_img_path', 'amino_acid_seq'])
+        # df = df.transpose()
+        # df.columns = ['nucleus_img_path', 'protein_img_path', 'amino_acid_seq']
 
         df.to_csv(csv_path, index=False)
         print(f"{csv_path} populated!")
@@ -104,11 +107,44 @@ class dataloader():
 
         if response.status_code == 200:
             data = response.json()
-            amino_acid_sequence = data.get('seq', None)
+            dna_seq = data.get('seq', None)
 
-            if amino_acid_sequence:
+            if dna_seq:
                 # print(f"aa seq {amino_acid_sequence}")
-                return amino_acid_sequence
+                dna_seq = Seq(dna_seq)
+                rna_seq = dna_seq.transcribe()
+                amino_seq = rna_seq.translate()
+                return amino_seq
+
+
+# def get_amino_acid_sequence(ensg_id):
+#     """
+#     Retrieves the amino acid sequence for a given ENSG ID using Ensembl BioMart.
+#     """
+#     # Connect to the Ensembl BioMart database
+#     server = biomart.BiomartServer("http://www.ensembl.org/biomart")
+#     dataset = server.datasets['hsapiens_gene_ensembl']
+    
+#     # Query to get the amino acid sequence using a different method
+#     query = dataset.build_query(
+#         attributes=["ensembl_gene_id", "peptide"],
+#         filters={"ensembl_gene_id": ensg_id}
+#     )
+    
+#     # Execute the query and retrieve the result
+#     response = query.execute()
+    
+#     # Extract and return the sequence
+#     if len(response) > 0:
+#         amino_acid_sequence = response[0]['peptide']
+#         return amino_acid_sequence
+#     else:
+#         print(f"No amino acid sequence found for ENSG ID: {ensg_id}")
+#         return None
+
+# # Example usage:
+# ensg_id = "ENSG00000004059"  # Example ENSG ID
+# amino_acid_sequence = get_amino_acid_sequence(ensg_id)  # Use the instance
 
 
 class OpenCellLoaderTF():

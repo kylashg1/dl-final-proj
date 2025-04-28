@@ -5,7 +5,7 @@ import tensorflow as tf
 import keras
 from einops import rearrange
 
-from celle.vae import VQGanVAE
+# from celle.vae import VQGanVAE
 from celle.transformer import Transformer, DivideMax
 import csv
 

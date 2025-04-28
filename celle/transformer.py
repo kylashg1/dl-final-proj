@@ -380,8 +380,10 @@ class Transformer(tf.keras.layers.Layer):
         pos_emb = None
         if rotary_emb:
             rot_dim = dim_head // 3
-            img_seq_len = ((image_fmap_size // num_images) ** 2) * num_images
+            # img_seq_len = ((image_fmap_size // num_images) ** 2) * num_images
+            img_seq_len = (image_fmap_size ** 2) * num_images
             text_len = seq_len - img_seq_len + 1
+
 
             text_pos_emb = RotaryEmbedding(dim=rot_dim)
             img_axial_pos_emb = RotaryEmbedding(dim=rot_dim, freqs_for="pixel")
