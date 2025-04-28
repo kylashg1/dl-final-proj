@@ -6,6 +6,17 @@ from transformer_new_new_new import TransformerModel
 from embed_to_density import EmbeddingToDensity
 from heatmap import overlay_density_on_image
 
+# Creating + training the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
+def train_vqgan(train_dataset):
+    vqgan = VQGAN(latent_dim=128)
+    # Compiling the model with optimizer and loss
+    vqgan.compile(
+        optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
+        loss=tf.keras.losses.MeanSquaredError(), # Reconstruction loss
+    )
+    vqgan.fit(train_dataset, epochs=1) # Training the model
+    vqgan.save('vqgan_model') # Saving the trained model
+
 def main():
     # Preprocess
 
@@ -16,12 +27,10 @@ def main():
     # processed_data.populate_inputs("unprocessed_data", "processed_data") # splits .tiff images into .png images
     # processed_data.populate_csv("data.csv") # puts processed .png images into the csv and searched up the corresponding amino acid sequence and also puts into data.csv
 
-
     # creates the vectorized dataset to pass into VQGAN
     dataset_tensor = data.OpenCellLoaderTF("data.csv", crop_size=256)
     dataset_tensor = dataset_tensor.get_dataset()
     dataset_tensor = dataset_tensor.batch(5)
-
 
     input = None
     threshold = None
@@ -39,7 +48,6 @@ def main():
     print(threshold.shape)  # (batch_size, 256, 256, 1)
     print(sequence.shape)  # (batch_size, 1, 1001, 256)
 
-
     # VQGAN
     # Loading in trained vqgan
     vqgan = tf.keras.models.load_model('vqgan_model', custom_objects={'VectorQuantizer': VectorQuantizer})
@@ -55,6 +63,7 @@ def main():
     # threshold_vqgan = VQGAN() # VQGAN(encoder(), decoder(), VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25))
     threshold_data = vqgan(threshold)
     print(f"output {threshold_data}")
+
 
     print(threshold_data.shape)  
 

@@ -70,6 +70,3 @@ class VQGAN(tf.keras.Model):
         # Returning reconstructed image
         return decoder_output
     
-
-
-
