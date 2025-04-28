@@ -11,7 +11,7 @@ def train_vqgan(train_dataset):
         optimizer=tf.keras.optimizers.Adam(learning_rate=1e-4),
         loss=tf.keras.losses.MeanSquaredError(), # Reconstruction loss
     )
-    vqgan.fit(train_dataset, epochs=100) # Training the model
+    vqgan.fit(train_dataset, epochs=1) # Training the model
     vqgan.save('vqgan_model') # Saving the trained model
 
 def main():
