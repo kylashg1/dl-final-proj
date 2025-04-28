@@ -162,15 +162,15 @@ class OpenCellLoaderTF():
         """
         encodes an amino acid sequence into tokens (numerical representation that the model can understand)
         :seq: input amino acid sequence
-        :return: tensor of a tokenized amino acid sequence with dimensions (1, 1001, 256)
+        :return: tensor of a tokenized amino acid sequence with dimensions (1, 1001, crop_size)
         """
         processed_seq = " ".join(seq)
         encoded_seq = self.tokenizer(processed_seq, padding="max_length", truncation=True, max_length=1001, return_tensors="tf") 
         protein_embeddings = self.bert_model(encoded_seq.input_ids).last_hidden_state # (1, 1001, 1024)
 
-        # need to project to 256-dim embedding to match VQGAN embeddings
-        projection_layer = tf.keras.layers.Dense(256)
-        protein_embeddings = projection_layer(protein_embeddings) # (1, 1001, 256)
+        # need to project to crop_size-dim embedding to match VQGAN embeddings
+        projection_layer = tf.keras.layers.Dense(self.crop_size)
+        protein_embeddings = projection_layer(protein_embeddings) # (1, 1001, crop_size)
         
         return protein_embeddings
 
@@ -217,6 +217,6 @@ class OpenCellLoaderTF():
             "nucleus": tf.TensorSpec(shape=(self.crop_size, self.crop_size, 1), dtype=tf.float32, name="nucleus"),
             "target": tf.TensorSpec(shape=(self.crop_size, self.crop_size, 1), dtype=tf.float32, name="target"),
             "threshold": tf.TensorSpec(shape=(self.crop_size, self.crop_size, 1), dtype=tf.float32, name="threshold"),
-            "sequence": tf.TensorSpec(shape=(1, 1001, 256), dtype=tf.int64, name="sequence")
+            "sequence": tf.TensorSpec(shape=(1, 1001, self.crop_size), dtype=tf.int64, name="sequence")
         }
         return tf.data.Dataset.from_generator(self._generator, output_signature=output_signature)
