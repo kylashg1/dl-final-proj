@@ -21,7 +21,7 @@ class dataloader():
         self.ENSG = set()
 
 
-    def download_cell_imgages(self, limit=3):
+    def download_cell_images(self, limit=3):
         """
         Script to download cell images from the OpenCell dataset
         """
