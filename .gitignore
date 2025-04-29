@@ -2,3 +2,6 @@ data/
 dl-final-proj/
 __pycache__/
 .DS_Store
+images/
+emd.png
+vqgan_training_loss.png
