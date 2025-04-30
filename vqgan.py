@@ -3,10 +3,11 @@ import tensorflow as tf
 class VectorQuantizer(tf.keras.layers.Layer):
     def __init__(self, codebook_size, code_dim, commitment_cost, **kwargs):
         super().__init__(**kwargs)
-        self.codebook_size = codebook_size # number of discrete vectors
+        self.codebook_size = codebook_size # Number of discrete vectors
         self.code_dim = code_dim
-        self.commitment_cost = commitment_cost # determines how much econder sticks vs. moving around
+        self.commitment_cost = commitment_cost # Determines how much econder sticks vs. moving around
         self.codebook = self.add_weight(shape=(codebook_size, code_dim), initializer='uniform', trainable=True, name='codebook')
+
 
     def call(self, inputs, training=False):
         # Flatten input to become (B, H, W, 128) --> (BHW, 128)
@@ -37,6 +38,7 @@ class VectorQuantizer(tf.keras.layers.Layer):
 
         return quantized, total_loss
 
+
 class VQGAN(tf.keras.Model):
     def __init__(self, latent_dim=128, input_shape=256, **kwargs):
         super().__init__(**kwargs)
@@ -59,7 +61,8 @@ class VQGAN(tf.keras.Model):
         ], name="Decoder")
         self.vquantizer = VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=0.25)
 
-    def call(self, input, training=True):
+
+    def call(self, inputs, training=False):
         # Encoding the images
         encoder_output = self.encoder(input, training=training)
 
