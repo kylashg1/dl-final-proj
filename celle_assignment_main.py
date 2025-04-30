@@ -32,7 +32,7 @@ def train_vqgan(train_dataset, target_dataset):
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('vqgan_training_loss.png')
+    plt.savefig('images/vqgan_training_loss.png', dpi=300, bbox_inches='tight')
     plt.close()
 
     vqgan.save('vqgan_model') # Saving the trained model
@@ -176,7 +176,7 @@ def main():
     plt.ylabel('EMD')
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig('emd.png')
+    plt.savefig('images/emd.png')
     plt.close()
 
 
