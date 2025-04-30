@@ -3,10 +3,11 @@ import tensorflow as tf
 class VectorQuantizer(tf.keras.layers.Layer):
     def __init__(self, codebook_size, code_dim, commitment_cost, **kwargs):
         super().__init__(**kwargs)
-        self.codebook_size = codebook_size # number of discrete vectors
+        self.codebook_size = codebook_size # Number of discrete vectors
         self.code_dim = code_dim
-        self.commitment_cost = commitment_cost # determines how much econder sticks vs. moving around
+        self.commitment_cost = commitment_cost # Determines how much econder sticks vs. moving around
         self.codebook = self.add_weight(shape=(codebook_size, code_dim), initializer='uniform', trainable=True, name='codebook')
+
 
     def call(self, inputs, training=False):
         # Flatten input to become (B, H, W, 128) --> (BHW, 128)
@@ -37,11 +38,13 @@ class VectorQuantizer(tf.keras.layers.Layer):
 
         return quantized, total_loss
 
+
 class VQGAN(tf.keras.Model):
     def __init__(self, latent_dim=128, input_shape=256, **kwargs):
         super().__init__(**kwargs)
         self.encoder = tf.keras.Sequential([
-            tf.keras.layers.Input(shape=(input_shape, input_shape, 1)), # Assuming thresholded input and is grayscale
+            # Assuming 2-channel image: nucleus and thresholded grayscale inputs
+            tf.keras.layers.Input(shape=(input_shape, input_shape, 2)),
             tf.keras.layers.Conv2D(64, 4, strides=2, padding='same', activation='relu'),
             tf.keras.layers.Conv2D(128, 4, strides=2, padding='same', activation='relu'),
             tf.keras.layers.Conv2D(256, 4, strides=2, padding='same', activation='relu'),
@@ -54,13 +57,14 @@ class VQGAN(tf.keras.Model):
             tf.keras.layers.Conv2DTranspose(64, 4, strides=2, padding='same', activation='relu'),
             tf.keras.layers.Conv2DTranspose(32, 4, strides=2, padding='same', activation='relu'),
             tf.keras.layers.Conv2DTranspose(16, 4, strides=2, padding='same', activation='relu'),
-            tf.keras.layers.Conv2D(1, 3, strides=1, padding='same', activation=None) # 1 output channel as logits
+            tf.keras.layers.Conv2D(2, 3, strides=1, padding='same', activation=None) # 1 output channel as logits
         ], name="Decoder")
-        self.vquantizer = VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=.25)
+        self.vquantizer = VectorQuantizer(codebook_size=512, code_dim=128, commitment_cost=0.25)
+
 
     def call(self, inputs, training=False):
         # Encoding the images
-        encoder_output = self.encoder(inputs, training=training)
+        encoder_output = self.encoder(input, training=training)
 
         # Getting vector quantizer output (codebook) and loss
         vquantizer_output, codebook_loss = self.vquantizer(encoder_output, training=training)
@@ -73,4 +77,3 @@ class VQGAN(tf.keras.Model):
 
         # Returning reconstructed image
         return decoder_output
-    

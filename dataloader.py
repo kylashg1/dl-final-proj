@@ -1,5 +1,4 @@
 import tensorflow as tf
-import keras
 import pandas as pd
 from PIL import Image
 import requests
@@ -7,23 +6,26 @@ import os
 import re
 import numpy as np
 import random
-import downloader as cell_downloader
+import utilities as cell_downloader
 from transformers import BertTokenizer, TFBertModel
-import torch
-# import biomart
 from Bio.Seq import Seq
 
 
-class dataloader():
+class Preprocess():
+    """
+    class to preprocess cell images and amino acid sequences into a data.csv file
+    """
     def __init__(self):
         # dict that maps amino acid sequence to nucleus_img_path and protein_img_path
         self.data = {}
         self.ENSG = set()
 
 
-    def download_cell_imgages(self, limit=3):
+    def download_cell_images(self, limit=3):
         """
         Script to download cell images from the OpenCell dataset
+
+        limit: sets the upper limit of how many images are downloaded from the OpenCell dataset; None argument will download all images from dataset
         """
         cell_downloader.download_from_OpenCell(limit)
 
@@ -67,7 +69,13 @@ class dataloader():
                     self.data[ensg_id[0]].append(new_file_name)
 
 
-    def populate_inputs(self, input_folder_path: str, output_folder_path:str):
+    def populate_image_inputs(self, input_folder_path: str, output_folder_path:str):
+        """
+        fills the processed_data folder with .png cell images
+
+        input_folder_path: path to the folder with .tif images
+        output_folder_path: folder for the split .png images 
+        """
         folder_path = input_folder_path
         valid_exts = (".png", ".jpg", ".jpeg", ".tif", ".tiff")
 
@@ -82,6 +90,8 @@ class dataloader():
         """
         Main func to preprocess data ->
         Fills the model's csv input file with nuclus_img_path, protein_img_path, and amino_acid_sequence
+
+        csv_path: path to the data.csv file that contains all the paths to images and amino acid sequences
         """
         for ensg_id in self.ENSG:
             amino_acid_sequence = self.get_amino_acid_sequence(ensg_id)
@@ -89,20 +99,20 @@ class dataloader():
         
         print(self.data)
         df = pd.DataFrame(self.data.values(), columns=['nucleus_img_path', 'protein_img_path', 'amino_acid_seq'])
-        # df = df.transpose()
-        # df.columns = ['nucleus_img_path', 'protein_img_path', 'amino_acid_seq']
 
         df.to_csv(csv_path, index=False)
         print(f"{csv_path} populated!")
 
 
-    def get_amino_acid_sequence(self, ENSG_ID: str):
+    def get_amino_acid_sequence(self, ENSG_id: str):
         """
         retrieves amino acid sequence from an ENSG_ID for a given protein from the emsembl database
         returns a string of the full amino acid sequence
+
+        ENSG_id: unique id for proteins
         """
         base_url = "https://rest.ensembl.org"
-        url = f"{base_url}/sequence/id/{ENSG_ID}?content-type=application/json"
+        url = f"{base_url}/sequence/id/{ENSG_id}?content-type=application/json"
         response = requests.get(url)
 
         if response.status_code == 200:
@@ -119,6 +129,9 @@ class dataloader():
 
 
 class OpenCellLoaderTF():
+    """
+    class that converts data inputs into tensors that are passed into the model
+    """
     def __init__(self, data_path, crop_size=256):
         self.df = pd.read_csv(data_path)
         self.crop_size = crop_size
@@ -161,6 +174,7 @@ class OpenCellLoaderTF():
     def _encode_sequence(self, seq):
         """
         encodes an amino acid sequence into tokens (numerical representation that the model can understand)
+
         :seq: input amino acid sequence
         :return: tensor of a tokenized amino acid sequence with dimensions (1, 1001, crop_size)
         """

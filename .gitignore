@@ -1,4 +1,6 @@
-data/
+processed_data/
+unprocessed_data/
+data.csv
 dl-final-proj/
 __pycache__/
 .DS_Store
