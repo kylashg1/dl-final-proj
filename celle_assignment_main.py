@@ -1,21 +1,26 @@
-# Import everything needed
+# Import libraries
 import dataloader as data
 from vqgan import VQGAN, VectorQuantizer
 import tensorflow as tf
 from transformer import TransformerModel
 from utilities import *
 import matplotlib.pyplot as plt
-import os
+import numpy as np
+import ot
+from scipy.spatial.distance import cdist
 
+# Setting paramaters for plots
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['savefig.bbox'] = 'tight'
 
-# Creating + training the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
 def train_vqgan(train_dataset, target_dataset):
+    '''
+    Creating + training the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
+    '''
     vqgan = VQGAN(latent_dim=128)
     # Compiling the model with optimizer and loss
     vqgan.compile(
-        optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-3),
+        optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-4),
         loss=tf.keras.losses.MeanSquaredError(), # Reconstruction loss
     )
     history = vqgan.fit(train_dataset, target_dataset, epochs=10, verbose=2) # Training the model
@@ -27,36 +32,65 @@ def train_vqgan(train_dataset, target_dataset):
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('vqgan_training_loss.png', dpi=300, bbox_inches='tight')
+    plt.savefig('vqgan_training_loss.png')
     plt.close()
 
     vqgan.save('vqgan_model') # Saving the trained model
 
+def tensor_to_image(tensor):
+    '''
+    Converts tensor to iamge
+    '''
+    tensor = tf.convert_to_tensor(tensor)
 
-# # Example Usage:
-# prob_map = np.random.rand(256, 256)  # Example probability heat map
-# ground_truth = np.random.rand(256, 256)  # Example ground truth image
+    # Normalize if needed (optional, depending on how your tensor looks)
+    if tf.reduce_max(tensor) > 1.0:
+        tensor = tensor / tf.reduce_max(tensor)
 
-# emd_result = compute_emd(prob_map, ground_truth)
-# print(f"Earth Mover's Distance: {emd_result}")
+    # If grayscale, expand dims to 3 channels
+    if len(tensor.shape) == 2:
+        tensor = tf.expand_dims(tensor, axis=-1)
+
+    tensor = tf.clip_by_value(tensor, 0.0, 1.0) # make sure values are between 0-1
+    return tensor
+
+
+def compute_emd(nucleus_data_list, density_maps):
+    '''
+    Computes Earth Mover's Distance - a new type of metric
+    '''
+    # Stack the list into a proper tensor
+    nucleus_data = tf.stack(nucleus_data_list, axis=0)  # Shape: [batch, 256, 256]
+
+    nucleus_flat = tf.reshape(nucleus_data, [tf.shape(nucleus_data)[0], -1])
+    density_flat = tf.reshape(density_maps, [tf.shape(density_maps)[0], -1])
+
+    nucleus_flat /= tf.reduce_sum(nucleus_flat, axis=1, keepdims=True) + 1e-8
+    density_flat /= tf.reduce_sum(density_flat, axis=1, keepdims=True) + 1e-8
+
+    nucleus_cdf = tf.cumsum(nucleus_flat, axis=1)
+    density_cdf = tf.cumsum(density_flat, axis=1)
+
+    emd_per_sample = tf.reduce_mean(tf.abs(nucleus_cdf - density_cdf), axis=1)
+
+    return emd_per_sample
+
+def save_img(img, fname):
+    '''
+    Saves images to images/ folder
+    '''
+    image = tensor_to_image(img)
+    plt.imshow(tf.squeeze(image), cmap='gray') # squeeze removes extra channel if needed
+    plt.axis('off')
+    plt.savefig(f'images/{fname}.png')
+
+
 
 def main():
-    # --Example usage--
-    # Preprocessing data
-    # Downloads cell images from OpenCell dataset, comment out if already downloaded
-
-    # Model creation
-
-    # Metrics 
-
-
-
-
-
     # Preprocess
 
     # # downloads images from OpenCell and put them into a csv and processed data folders
-    # processed_data = data.preprocess()
+    # processed_data = data.dataloader()
     # limit = 100
     # # processed_data.download_cell_imgages(limit=limit) # download function for OpenCell AWS server - only argument is how many TOTAL images you want to download, None means download ALL images
     # processed_data.populate_inputs("unprocessed_data", "processed_data") # splits .tiff images into .png images
@@ -65,26 +99,40 @@ def main():
     # creates the vectorized dataset to pass into VQGAN
     dataset = data.OpenCellLoaderTF("data.csv", crop_size=256).get_dataset()
 
-    # Map nucleus and threshold images into two-channel images
-    def vqgan_two_channel_inputs(data):
-        return (tf.concat([data['nucleus'], data['threshold']], axis=-1)) * 2
+    # Get data in four separate tensors
+    nucleus_list = []
+    target_list = []
+    threshold_list = []
+    sequence_list = []
 
-    vqgan_dataset = dataset.map(vqgan_two_channel_inputs).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
+    # Adding batches to respective lists
+    for batch in dataset:
+        nucleus_list.append(batch["nucleus"])
+        target_list.append(batch["target"])
+        threshold_list.append(batch["threshold"])
+        sequence_list.append(batch["sequence"])
+
+    # Making lists into tensors
+    nucleus_tensor = tf.stack(nucleus_list)
+    target_tensor = tf.stack(target_list) # Probably not useful
+    threshold_tensor = tf.stack(threshold_list)
+    sequence_tensor = tf.stack(sequence_list)
 
     # VQGAN
     
     # Traning vqgan
-    combined_list = nucleus_list + threshold_list
-    combined_tensor = tf.stack(combined_list)
-    train_vqgan(combined_tensor, combined_tensor)
+    # combined_list = nucleus_list + threshold_list
+    # combined_tensor = tf.stack(combined_list)
+    # train_vqgan(combined_tensor, combined_tensor)
     vqgan = tf.keras.models.load_model('vqgan_model', custom_objects={'VectorQuantizer': VectorQuantizer})
 
 
+    # Feeding in nucleus images into vqgan
     nucleus_data = vqgan(nucleus_tensor)
     print(f"nucleus data output {nucleus_data}")
     print(f"Nucleus data shape: {nucleus_data.shape}")  
 
-    # For the threshold image
+    ## Feeding in threshold images into vqgan
     threshold_data = vqgan(threshold_tensor)
     print(f"threshold data output {threshold_data}")
     print(f"threshold data shape: {threshold_data.shape}")  
@@ -102,10 +150,9 @@ def main():
 
 
 
-    # Concatenate
+    # Concatenating embeddings
     concat_input = tf.concat([sequence, nucleus_data, threshold_data], axis=1)
     print(f"Concatentation shape: {concat_input.shape}")
-
 
 
     # Transformer Model
@@ -119,14 +166,9 @@ def main():
     density_maps = density_model(transformer_output)
     print(f"Density map shape: {density_maps.shape}")  # (3, 256, 256, 1)
 
-    # overlay_density_on_image(nucleus_image, density_map, alpha=0.5)
 
-    # emd_value = compute_emd(density_map, threshold_image)
-    # print(f"emd value: {emd_value}")
-
-
+    # Computing EMD values and plotting rsule
     emd_scores = compute_emd(nucleus_list, density_maps).numpy()
-
     plt.figure(figsize=(6, 6))
     plt.plot(emd_scores, marker='o')
     plt.title('Earth Mover\'s Distance (Batch)')
@@ -136,10 +178,9 @@ def main():
     plt.tight_layout()
     plt.savefig('emd.png')
     plt.close()
-    
-    if not os.path.exists('images'):
-        os.makedirs('images')
 
+
+    # Saving images
     for i, imgs in enumerate(zip(threshold_list, nucleus_list, target_list, density_maps)):
         t_img, n_img, tar_img, d_map = imgs
         overlay_density_on_image(image=t_img, density_map=d_map, fname=f'threshold_density{i}', alpha=0.5)
