@@ -65,11 +65,22 @@ def main():
     # creates the vectorized dataset to pass into VQGAN
     dataset = data.OpenCellLoaderTF("data.csv", crop_size=256).get_dataset()
 
-    # Map nucleus and threshold images into two-channel images
-    def vqgan_two_channel_inputs(data):
-        return (tf.concat([data['nucleus'], data['threshold']], axis=-1)) * 2
+    # Get data in four separate tensors
+    nucleus_list = []
+    target_list = []
+    threshold_list = []
+    sequence_list = []
 
-    vqgan_dataset = dataset.map(vqgan_two_channel_inputs).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
+    for batch in dataset:
+        nucleus_list.append(batch["nucleus"])
+        target_list.append(batch["target"])
+        threshold_list.append(batch["threshold"])
+        sequence_list.append(batch["sequence"])
+
+    nucleus_tensor = tf.stack(nucleus_list)
+    target_tensor = tf.stack(target_list) # Probably not useful
+    threshold_tensor = tf.stack(threshold_list)
+    sequence_tensor = tf.stack(sequence_list)
 
     # VQGAN
     
