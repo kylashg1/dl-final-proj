@@ -15,7 +15,7 @@ def train_vqgan(train_dataset, target_dataset):
     vqgan = VQGAN(latent_dim=128)
     # Compiling the model with optimizer and loss
     vqgan.compile(
-        optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-4),
+        optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-3),
         loss=tf.keras.losses.MeanSquaredError(), # Reconstruction loss
     )
     history = vqgan.fit(train_dataset, target_dataset, epochs=10, verbose=2) # Training the model
@@ -27,7 +27,7 @@ def train_vqgan(train_dataset, target_dataset):
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
     plt.legend()
-    plt.savefig('vqgan_training_loss.png')
+    plt.savefig('vqgan_training_loss.png', dpi=300, bbox_inches='tight')
     plt.close()
 
     vqgan.save('vqgan_model') # Saving the trained model
@@ -65,22 +65,11 @@ def main():
     # creates the vectorized dataset to pass into VQGAN
     dataset = data.OpenCellLoaderTF("data.csv", crop_size=256).get_dataset()
 
-    # Get data in four separate tensors
-    nucleus_list = []
-    target_list = []
-    threshold_list = []
-    sequence_list = []
+    # Map nucleus and threshold images into two-channel images
+    def vqgan_two_channel_inputs(data):
+        return (tf.concat([data['nucleus'], data['threshold']], axis=-1)) * 2
 
-    for batch in dataset:
-        nucleus_list.append(batch["nucleus"])
-        target_list.append(batch["target"])
-        threshold_list.append(batch["threshold"])
-        sequence_list.append(batch["sequence"])
-
-    nucleus_tensor = tf.stack(nucleus_list)
-    target_tensor = tf.stack(target_list) # Probably not useful
-    threshold_tensor = tf.stack(threshold_list)
-    sequence_tensor = tf.stack(sequence_list)
+    vqgan_dataset = dataset.map(vqgan_two_channel_inputs).shuffle(1000).batch(32).prefetch(tf.data.AUTOTUNE)
 
     # VQGAN
     
