@@ -88,10 +88,10 @@ def main(data_csv: str='data.csv', limit: int=100, crop_size: int=256):
     limit TOTAL number of images to download from OpenCell
     """
 
-    # Preprocess
+    # Preprocessing data ----------------------------
 
     # # downloads images from OpenCell and put them into a csv and processed data folders
-    if not os.path.exists(data_csv):
+    if not os.path.exists(data_csv) and not os.path.exists("processed_data") and not os.path.exists("unprocessed_data"):
         processed_data = data.dataloader()
         processed_data.download_cell_images(limit=limit) # download function for OpenCell AWS server - only argument is how many TOTAL images you want to download, None means download ALL images
         processed_data.populate_inputs("unprocessed_data", "processed_data") # splits .tiff images into .png images
@@ -119,7 +119,7 @@ def main(data_csv: str='data.csv', limit: int=100, crop_size: int=256):
     threshold_tensor = tf.stack(threshold_list)
     sequence_tensor = tf.stack(sequence_list)
 
-    # VQGAN
+    # VQGAN ----------------------------
     
     # Traning vqgan
     if not os.path.exists('vqgan_model'):
@@ -156,6 +156,7 @@ def main(data_csv: str='data.csv', limit: int=100, crop_size: int=256):
     concat_input = tf.concat([sequence, nucleus_data, threshold_data], axis=1)
     print(f"Concatentation shape: {concat_input.shape}")
 
+    # Transformer ----------------------------
 
     # Transformer Model
     transformer_model = TransformerModel(embed_dim=256, num_heads=8, ff_dim=512, num_layers=4)

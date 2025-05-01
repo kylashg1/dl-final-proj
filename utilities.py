@@ -4,7 +4,6 @@ import boto3
 from botocore import UNSIGNED
 from botocore.config import Config
 import tensorflow as tf
-import tensorflow as tf
 import matplotlib.pyplot as plt
 
 
