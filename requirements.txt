@@ -1,11 +1,8 @@
 numpy
 pandas
 matplotlib
-tensorflow[and-cuda]
+tensorflow
 torch
-keras
-rotary-embedding-tensorflow
-einops
 boto3
 transformers
 Bio

@@ -3,15 +3,14 @@
 
 ## Requirements
 ``` bash
-python3 -m venv dl-final-proj && \
-source dl-final-proj/bin/activate && \
+python3 -m venv dl-final-proj-venv && \
+source dl-final-proj-venv/bin/activate && \
 pip install --upgrade pip && \
 pip install -r requirements.txt
 ```
 
 ## Dataset
-We used OpenCell, which can be downloaded from https://opencell.sf.czbiohub.org/download. Helper script download_tifs_proj.sh included to download images.
-Need to produce csv file with the columns ```nucleus_image_path```, ```protein_image_path```, ```metadata_path```, and ```split``` (train or val).
+We used OpenCell, which can be downloaded from https://opencell.sf.czbiohub.org/download.
 
 ## Usage
 ```
