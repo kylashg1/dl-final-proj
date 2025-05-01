@@ -1,9 +1,7 @@
 processed_data/
 unprocessed_data/
 data.csv
-dl-final-proj/
+dl-final-proj-venv/
 __pycache__/
 .DS_Store
 images/
-emd.png
-vqgan_training_loss.png
