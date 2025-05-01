@@ -5,19 +5,17 @@ import tensorflow as tf
 from transformer import TransformerModel
 from utilities import *
 import matplotlib.pyplot as plt
-import numpy as np
-import ot
-from scipy.spatial.distance import cdist
+import os
 
 # Setting paramaters for plots
 plt.rcParams['savefig.dpi'] = 300
 plt.rcParams['savefig.bbox'] = 'tight'
 
-def train_vqgan(train_dataset, target_dataset):
+def train_vqgan(train_dataset, target_dataset, input_shape):
     '''
     Creating + training the model - training data should be in (batch_size, 64, 64, 1) normalized to [-1, 1]
     '''
-    vqgan = VQGAN(latent_dim=128)
+    vqgan = VQGAN(latent_dim=128, input_shape=input_shape)
     # Compiling the model with optimizer and loss
     vqgan.compile(
         optimizer=tf.keras.optimizers.legacy.Adam(learning_rate=1e-4),
@@ -54,7 +52,6 @@ def tensor_to_image(tensor):
     tensor = tf.clip_by_value(tensor, 0.0, 1.0) # make sure values are between 0-1
     return tensor
 
-
 def compute_emd(nucleus_data_list, density_maps):
     '''
     Computes Earth Mover's Distance - a new type of metric
@@ -84,20 +81,24 @@ def save_img(img, fname):
     plt.axis('off')
     plt.savefig(f'images/{fname}.png')
 
+def main(data_csv: str='data.csv', limit: int=100, crop_size: int=256):
+    """
+    Parameters
+    data_csv path to data.csv
+    limit TOTAL number of images to download from OpenCell
+    """
 
-
-def main():
     # Preprocess
 
     # # downloads images from OpenCell and put them into a csv and processed data folders
-    # processed_data = data.dataloader()
-    # limit = 100
-    # # processed_data.download_cell_imgages(limit=limit) # download function for OpenCell AWS server - only argument is how many TOTAL images you want to download, None means download ALL images
-    # processed_data.populate_inputs("unprocessed_data", "processed_data") # splits .tiff images into .png images
-    # processed_data.populate_csv("data.csv") # puts processed .png images into the csv and searched up the corresponding amino acid sequence and also puts into data.csv
+    if not os.path.exists(data_csv):
+        processed_data = data.dataloader()
+        processed_data.download_cell_images(limit=limit) # download function for OpenCell AWS server - only argument is how many TOTAL images you want to download, None means download ALL images
+        processed_data.populate_inputs("unprocessed_data", "processed_data") # splits .tiff images into .png images
+        processed_data.populate_csv(data_csv) # puts processed .png images into the csv and searched up the corresponding amino acid sequence and also puts into data.csv
 
     # creates the vectorized dataset to pass into VQGAN
-    dataset = data.OpenCellLoaderTF("data.csv", crop_size=256).get_dataset()
+    dataset = data.OpenCellLoaderTF(data_csv, crop_size).get_dataset()
 
     # Get data in four separate tensors
     nucleus_list = []
@@ -121,9 +122,10 @@ def main():
     # VQGAN
     
     # Traning vqgan
-    # combined_list = nucleus_list + threshold_list
-    # combined_tensor = tf.stack(combined_list)
-    # train_vqgan(combined_tensor, combined_tensor)
+    if not os.path.exists('vqgan_model'):
+        combined_list = nucleus_list + threshold_list
+        combined_tensor = tf.stack(combined_list)
+        train_vqgan(combined_tensor, combined_tensor, input_shape=crop_size)
     vqgan = tf.keras.models.load_model('vqgan_model', custom_objects={'VectorQuantizer': VectorQuantizer})
 
 
