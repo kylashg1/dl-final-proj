@@ -64,30 +64,6 @@ def download_from_OpenCell(limit=0):
 
     # print(f"downloading done!!! -> {count} unique ENSG_id cell images downloaded from OpenCell!!!.")
 
-
-class EmbeddingToDensity(tf.keras.Model):
-    """
-    model that turns image + AA sequence embeddings to density plot maps
-    """
-    def __init__(self):
-        super(EmbeddingToDensity, self).__init__()
-        self.dense_proj = tf.keras.layers.Dense(64*64, activation='relu')  # reduce sequence length
-        self.reshape_layer = tf.keras.layers.Reshape((64, 64, 1))
-        self.upsample = tf.keras.Sequential([
-            tf.keras.layers.Conv2DTranspose(32, 4, strides=2, padding='same', activation='relu'),  # 64->128
-            tf.keras.layers.Conv2DTranspose(16, 4, strides=2, padding='same', activation='relu'),  # 128->256
-            tf.keras.layers.Conv2D(1, 3, padding='same', activation='sigmoid')  # output map
-        ])
-    
-
-    def call(self, x):
-        x = tf.reduce_mean(x, axis=-1)  # (batch_size, seq_len) -> summarize embeddings
-        x = self.dense_proj(x)           # (batch_size, 64*64)
-        x = self.reshape_layer(x)        # (batch_size, 64, 64, 1)
-        x = self.upsample(x)             # (batch_size, 256, 256, 1)
-        return x
-
-
 def overlay_density_on_image(image, density_map, fname, alpha=0.4, cmap='jet'):
     """
     overlays a density map onto an image.
@@ -132,16 +108,11 @@ def tensor_to_image(tensor):
     tensor = tf.clip_by_value(tensor, 0.0, 1.0) # make sure values are between 0-1
     return tensor
 
-
-
-def compute_emd(nucleus_data_list, density_maps):
-    """
-    computes Earth Mover's Distance given a dataset and density maps (metric to compare two density distributions)
-    """
-    # stack the list into a proper tensor
-    nucleus_data = tf.stack(nucleus_data_list, axis=0)  # (batch, 256, 256)
-
-    nucleus_flat = tf.reshape(nucleus_data, [tf.shape(nucleus_data)[0], -1])
+def compute_emd(nucleus_tensor, density_maps):
+    '''
+    Computes Earth Mover's Distance - a new type of metric
+    '''
+    nucleus_flat = tf.reshape(nucleus_tensor, [tf.shape(nucleus_tensor)[0], -1])
     density_flat = tf.reshape(density_maps, [tf.shape(density_maps)[0], -1])
 
     nucleus_flat /= tf.reduce_sum(nucleus_flat, axis=1, keepdims=True) + 1e-8
@@ -154,12 +125,46 @@ def compute_emd(nucleus_data_list, density_maps):
 
     return emd_per_sample
 
+def save_emd(emd_scores):
+    fig, axs = plt.subplots(1, 3, figsize=(18, 6))
+
+    # 1. Sorted line plot
+    import numpy as np
+    axs[0].plot(np.sort(emd_scores))
+    axs[0].set_title('Sorted EMD')
+    axs[0].set_ylabel('EMD')
+
+    # 2. Histogram
+    axs[1].hist(emd_scores, bins=30, color='teal', edgecolor='black', alpha=0.75)
+    axs[1].set_title('EMD Score Distribution')
+    axs[1].set_xlabel('EMD Value')
+    axs[1].set_ylabel('Frequency')
+
+    # 3. Boxplot
+    axs[2].boxplot(emd_scores, vert=True)
+    axs[2].set_title('EMD Boxplot')
+    axs[2].set_ylabel('EMD')
+
+    plt.tight_layout()
+    plt.savefig('images/emd.png')
+    plt.close()
 
 def save_img(img, fname):
-        """
-        saves images to a file! 
-        """
-        image = tensor_to_image(img)
-        plt.imshow(tf.squeeze(image), cmap='gray') # squeeze removes extra channel if needed
-        plt.axis('off')
-        plt.savefig(f'images/{fname}.png')
+    '''
+    Saves images to images/ folder
+    '''
+    image = tensor_to_image(img)
+    plt.imshow(tf.squeeze(image), cmap='gray') # squeeze removes extra channel if needed
+    plt.axis('off')
+    plt.savefig(f'images/{fname}.png')
+
+def save_density_map(density_map, fname, cmap='jet'):
+    """
+    Save just the density map
+    """
+    density_map = density_map.numpy().squeeze()
+    density_map = (density_map - density_map.min()) / (density_map.max() - density_map.min() + 1e-8)
+    plt.imshow(density_map, cmap=cmap)
+    plt.axis('off')
+    plt.savefig(f'images/{fname}.png', dpi=300, bbox_inches='tight')
+    plt.close()
