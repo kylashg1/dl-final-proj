@@ -31,6 +31,14 @@ class TransformerModel(tf.keras.Model):
             for _ in range(num_layers)
         ]
 
+        # Embedding to Density
+        self.dense_proj = tf.keras.layers.Dense(64*64, activation='relu')  # reduce sequence length
+        self.reshape_layer = tf.keras.layers.Reshape((64, 64, 1))
+        self.upsample = tf.keras.Sequential([
+            tf.keras.layers.Conv2DTranspose(32, 4, strides=2, padding='same', activation='relu'),  # 64->128
+            tf.keras.layers.Conv2DTranspose(16, 4, strides=2, padding='same', activation='relu'),  # 128->256
+            tf.keras.layers.Conv2D(1, 3, padding='same', activation='sigmoid')  # output map
+        ])
 
     def call(self, x, training=False):
         for norm, attn, ffn, drop in zip(self.encoder_layers, self.self_attention_layers, self.ffn_layers, self.dropout_layers):
@@ -40,9 +48,15 @@ class TransformerModel(tf.keras.Model):
             attn_output = attn(x_norm, x_norm)
             x = x + drop(attn_output, training=training)
 
-            # feed forawrd layer
+            # feed forward layer
             x_norm = norm(x)
             ffn_output = ffn(x_norm)
             x = x + drop(ffn_output, training=training)
+
+        # Embedding to Density
+        x = tf.reduce_mean(x, axis=-1)
+        x = self.dense_proj(x)
+        x = self.reshape_layer(x)
+        x = self.upsample(x)
 
         return x
